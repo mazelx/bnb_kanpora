@@ -66,8 +66,8 @@ def ws_individual_request(config, url, attempt_id, params=None):
         if len(config.HTTP_PROXY_LIST) > 0:
             http_proxy = random.choice(config.HTTP_PROXY_LIST)
             proxies = {
-                'http': http_proxy,
-                'https': http_proxy,
+                'http': 'http://' + http_proxy,
+                'https': 'https://' + http_proxy,
             }
             LOGGER.debug("Requesting page through proxy %s", http_proxy)
         else:
@@ -122,7 +122,7 @@ def ws_individual_request(config, url, attempt_id, params=None):
         # For requests error and exceptions, see
         # http://docs.python-requests.org/en/latest/user/quickstart/
         # errors-and-exceptions
-        LOGGER.warning("Network request %s: connectionError. Bad proxy %s?",
+        LOGGER.warning("Network request %s: connectionError. Bad proxy %s ?",
                        attempt_id, http_proxy)
         return None
     except requests.exceptions.HTTPError:
