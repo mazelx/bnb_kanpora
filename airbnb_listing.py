@@ -40,6 +40,7 @@ class ABListing():
         self.minstay = None
         self.latitude = None
         self.longitude = None
+        self.license = None
         self.survey_id = survey_id
         #  extra fields added from search json:
         # coworker_hosted (bool)
@@ -95,7 +96,7 @@ class ABListing():
                    "city", "neighborhood", "address", "reviews",
                    "overall_satisfaction", "accommodates", "bedrooms",
                    "bathrooms", "price", "deleted", "minstay",
-                   "latitude", "longitude", "survey_id", "last_modified",)
+                   "latitude", "longitude", "survey_id", "last_modified","license")
         return columns
 
     def save_as_deleted(self):
@@ -276,14 +277,14 @@ class ABListing():
                     accommodates, bedrooms, bathrooms, price, deleted,
                     minstay, latitude, longitude, survey_id,
                     coworker_hosted, extra_host_languages, name,
-                    property_type, currency, rate_type
+                    property_type, currency, rate_type, license
 
                 )
                 """
             sql += """
                 values (%s, %s, %s, %s, %s, %s, %s, %s, %s,
                 %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                %s, %s, %s, %s, %s, %s
+                %s, %s, %s, %s, %s, %s, %s
                 )"""
             insert_args = (
                 self.room_id, self.host_id, self.room_type, self.country,
@@ -292,7 +293,7 @@ class ABListing():
                 self.bathrooms, self.price, self.deleted, self.minstay,
                 self.latitude, self.longitude, self.survey_id,
                 self.coworker_hosted, self.extra_host_languages, self.name,
-                self.property_type, self.currency, self.rate_type
+                self.property_type, self.currency, self.rate_type, self.license
                 )
             cur.execute(sql, insert_args)
             cur.close()
@@ -325,7 +326,7 @@ class ABListing():
                     price = %s, deleted = %s, last_modified = now()::timestamp,
                     minstay = %s, latitude = %s, longitude = %s,
                     coworker_hosted = %s, extra_host_languages = %s, name = %s,
-                    property_type = %s, currency = %s, rate_type = %s
+                    property_type = %s, currency = %s, rate_type = %s, license = %s
                 where room_id = %s
                 and survey_id = %s"""
             update_args = (
@@ -337,7 +338,7 @@ class ABListing():
                 self.minstay, self.latitude,
                 self.longitude,
                 self.coworker_hosted, self.extra_host_languages, self.name,
-                self.property_type, self.currency, self.rate_type,
+                self.property_type, self.currency, self.rate_type, self.license,
                 self.room_id,
                 self.survey_id,
                 )

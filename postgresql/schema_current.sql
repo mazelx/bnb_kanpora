@@ -90,6 +90,7 @@ CREATE TABLE public.room
   price double precision,
   deleted integer,
   minstay integer,
+  license character varying(255),
   last_modified timestamp without time zone DEFAULT now(),
   latitude numeric(30,6),
   longitude numeric(30,6),
