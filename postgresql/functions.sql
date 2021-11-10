@@ -25,6 +25,7 @@ returns table (
   price double precision,
   deleted integer,
   minstay integer,
+  license character varying(255),
   last_modified timestamp,
   latitude numeric(30,6),
   longitude numeric(30,6),
@@ -33,8 +34,8 @@ $BODY$
   select room_id, host_id, room_type,
     country, city, neighborhood, address, reviews,
     overall_satisfaction, accommodates, bedrooms,
-    bathrooms, price, deleted, minstay, last_modified,
-    latitude, longitude, survey_id
+    bathrooms, price, deleted, minstay, license, 
+    last_modified, latitude, longitude, survey_id
     from room as r
     where r.survey_id = $1
     and price is not null

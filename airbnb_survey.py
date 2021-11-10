@@ -188,6 +188,10 @@ class ABSurvey():
                     listing.property_type = pt
             else:
                 listing.property_type = None
+            if "license" in json_listing:
+                listing.license = json_listing["license"]
+            else:
+                listing.license = None
             # pricing
             json_pricing = json["pricing_quote"]
             listing.price = json_pricing["rate"]["amount"] if "rate" in json_pricing else None
