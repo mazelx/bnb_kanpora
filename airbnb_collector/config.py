@@ -13,25 +13,16 @@ logger = logging.getLogger()
 
 class ABConfig():
 
-    def __init__(self, args=None):
+    def __init__(self, config_file=None, verbose=False):
         """ Read the configuration file <username>.config to set up the run
         """
-        self.config_file = None
-        self.log_level = logging.INFO
-        if args is not None:
-            self.config_file = args.config_file
-            try:
-                if args.verbose:
-                    self.log_level = logging.DEBUG
-                else:
-                    self.log_level = logging.INFO
-            except:
-                self.log_level = logging.INFO
+        self.config_file = config_file
+        self.log_level = logging.DEBUG if verbose else logging.INFO
         self.connection = None
-        self.FLAGS_ADD = 1
-        self.FLAGS_PRINT = 9
-        self.FLAGS_INSERT_REPLACE = True
-        self.FLAGS_INSERT_NO_REPLACE = False
+        #self.FLAGS_ADD = 1
+        #self.FLAGS_PRINT = 9
+        #self.FLAGS_INSERT_REPLACE = True
+        #self.FLAGS_INSERT_NO_REPLACE = False
         self.URL_ROOT = "https://www.airbnb.com/"
         self.URL_ROOM_ROOT = self.URL_ROOT + "rooms/"
         self.URL_HOST_ROOT = self.URL_ROOT + "users/show/"
@@ -49,6 +40,7 @@ class ABConfig():
         self.HTTP_PROXY_LIST = []
         self.HTTP_PROXY_LIST_COMPLETE = []
         self.GOOGLE_API_KEY = None
+        
 
         try:
             config = configparser.ConfigParser()
@@ -165,31 +157,3 @@ class ABConfig():
         except Exception:
             logger.exception("Failed to read config file properly")
             raise
-
-    def connect(self):
-    # get a database connection
-        """ Return a connection to the database"""
-        try:
-            if (not hasattr(self, "connection") or
-                    self.connection is None or
-                    self.connection.closed != 0):
-                cattr = dict(
-                    user=self.DB_USER,
-                    password=self.DB_PASSWORD,
-                    database=self.DB_NAME
-                )
-                if self.DB_HOST is not None:
-                    cattr.update(dict(
-                        host=self.DB_HOST,
-                        port=self.DB_PORT,
-                    ))
-                self.connection = psycopg2.connect(**cattr)
-                self.connection.set_client_encoding('UTF8')
-            return self.connection
-        except psycopg2.OperationalError as pgoe:
-            logger.error(pgoe.pgerror)
-            raise
-        except Exception:
-            logger.error("Failed to connect to database.")
-            raise
-
