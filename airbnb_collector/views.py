@@ -5,10 +5,7 @@
 # An ABListing represents and individual Airbnb listing
 # ===========================================================================
 
-from airbnb_collector.requests import ABRequest
-from airbnb_collector.config import ABConfig
-from airbnb_collector.models import RoomModel, SurveyModel, SurveyProgressModel, SearchAreaModel, DBUtils
-from airbnb_collector.requests import ABRequest
+from models import RoomModel, SurveyModel, SearchAreaModel
 
 class ABDatabaseViewer():
     pass

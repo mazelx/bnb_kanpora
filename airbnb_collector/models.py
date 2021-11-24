@@ -1,6 +1,7 @@
-from airbnb_collector.config import ABConfig
+from config import ABConfig
+from utils import GeoBox
 
-from peewee import AutoField, BooleanField, CharField, CompositeKey, ForeignKeyField, Model, PostgresqlDatabase, IntegerField, DecimalField, DateTimeField, SmallIntegerField, TextField
+from peewee import AutoField, BooleanField, CharField, CompositeKey, ForeignKeyField, Model, PostgresqlDatabase, IntegerField, DecimalField, DateTimeField, SmallIntegerField, TextField, BigIntegerField
 from datetime import datetime
 
 # TODO fix object instanciation with config 
@@ -11,7 +12,8 @@ database =  PostgresqlDatabase(
     user=cfg.DB_USER, 
     password=cfg.DB_PASSWORD,
     host=cfg.DB_HOST, 
-    port=cfg.DB_PORT
+    port=cfg.DB_PORT,
+    autorollback=True
 )
 
 class BaseModel(Model):
@@ -29,6 +31,15 @@ class SearchAreaModel(BaseModel):
     bb_e_lng = DecimalField(30,6)
     bb_s_lat = DecimalField(30,6)
     bb_w_lng = DecimalField(30,6)
+
+    @property
+    def geobox(self):
+        return GeoBox(
+            n_lat=self.bb_n_lat,
+            e_lng=self.bb_e_lng,
+            s_lat=self.bb_s_lat,
+            w_lng=self.bb_w_lng,
+        )
 
 
 class SurveyModel(BaseModel):
@@ -49,8 +60,8 @@ class RoomModel(BaseModel):
         table_name = "room"
         primary_key = CompositeKey('survey_id', 'room_id')
 
-    room_id = IntegerField()
-    host_id = IntegerField()
+    room_id = BigIntegerField()
+    host_id = BigIntegerField()
     name = CharField(255)
     room_type = CharField(100)
     country = CharField(255, null=True)
@@ -65,7 +76,7 @@ class RoomModel(BaseModel):
     price = DecimalField(5,2, null=True)
     deleted = BooleanField(default=False)
     minstay = IntegerField(null=True)
-    license = CharField(100, null=True)
+    license = CharField(2000, null=True)
     last_modified = DateTimeField(default=datetime.now)
     latitude = DecimalField(30,6)
     longitude = DecimalField(30,6)
@@ -95,11 +106,13 @@ class DBUtils:
     def create_tables():
         with database:
             database.create_tables(DBUtils.models)
+        return True
 
     @staticmethod
     def drop_tables():
         with database:
             database.drop_tables(DBUtils.models)
+        return True
 
     @staticmethod
     def check_connection():

@@ -6,8 +6,6 @@ import logging
 import os
 import configparser
 import sys
-import psycopg2
-import psycopg2.errorcodes
 
 logger = logging.getLogger()
 
@@ -36,12 +34,13 @@ class ABConfig():
         self.SEARCH_BY_BOUNDING_BOX = 'bounding box'
         self.SEARCH_LISTINGS_ON_FULL_PAGE = 18
         self.SEARCH_DO_LOOP_OVER_PRICES = False
-        self.SEARCH_DO_LOOP_OVER_ROOM_TYPES = False
         self.HTTP_PROXY_LIST = []
         self.HTTP_PROXY_LIST_COMPLETE = []
         self.GOOGLE_API_KEY = None
+        self.AWS_KEY = None
+        self.AWS_SECRET = None
+        self.USE_ROTATING_IP = False
         
-
         try:
             config = configparser.ConfigParser()
 
@@ -69,19 +68,24 @@ class ABConfig():
                 logger.error("Incomplete database information in %s: cannot continue",
                              self.config_file)
                 sys.exit()
+
             # network
             try:
-                self.HTTP_PROXY_LIST = config["NETWORK"]["proxy_list"].split(",")
-                self.HTTP_PROXY_LIST = [x.strip() for x in self.HTTP_PROXY_LIST]
-                # Remove any empty strings from the list of proxies
-                self.HTTP_PROXY_LIST = [x for x in self.HTTP_PROXY_LIST if x]
+                self.USE_ROTATING_IP = config["NETWORK"].getboolean("rotating_ip_proxy")
             except Exception:
-                logger.warning("No proxy_list in %s: not using proxies",
-                               self.config_file)
-                self.HTTP_PROXY_LIST = []
-            self.HTTP_PROXY_LIST_COMPLETE = list(self.HTTP_PROXY_LIST)
-            logger.info("Complete proxy list has %s proxies",
-                         len(self.HTTP_PROXY_LIST_COMPLETE))
+                logger.warning("Rotating IP has not been activated")
+
+            if not(self.USE_ROTATING_IP):
+                try:
+                    self.HTTP_PROXY_LIST = config["NETWORK"]["proxy_list"].split(",")
+                    self.HTTP_PROXY_LIST = [x.strip() for x in self.HTTP_PROXY_LIST]
+                    # Remove any empty strings from the list of proxies
+                    self.HTTP_PROXY_LIST = [x for x in self.HTTP_PROXY_LIST if x]
+                except Exception:
+                    logger.warningf("No proxy_list in {self.config_file}: not using proxies")
+                    self.HTTP_PROXY_LIST = []
+                self.HTTP_PROXY_LIST_COMPLETE = list(self.HTTP_PROXY_LIST)
+                logger.info(f"Complete proxy list has {len(self.HTTP_PROXY_LIST_COMPLETE)} proxies")
             try:
                 self.USER_AGENT_LIST = config["NETWORK"]["user_agent_list"].split(",,")
                 self.USER_AGENT_LIST = [x.strip() for x in self.USER_AGENT_LIST]
@@ -129,13 +133,6 @@ class ABConfig():
                 logger.warning(
                     "Missing config file entry: search_do_loop_over_prices.")
                 logger.warning("For more information, see example.config")
-            try:
-                self.SEARCH_DO_LOOP_OVER_ROOM_TYPES = int(
-                    config["SURVEY"]["search_do_loop_over_room_types"])
-            except:
-                logger.warning(
-                    "Missing config file entry: search_do_loop_over_room_types.")
-                logger.warning("For more information, see example.config")
             self.RE_INIT_SLEEP_TIME = float(config["SURVEY"]["re_init_sleep_time"])
             try:
                 self.SEARCH_RECTANGLE_EDGE_BLUR = float(
@@ -153,6 +150,13 @@ class ABConfig():
                     "Missing config file entry: Google API Key. Needed only for geocoding")
                 logger.warning("For more information, see example.config")
 
+            try: 
+                self.AWS_KEY = config["ACCOUNT"]["aws_key"]
+                self.AWS_SECRET = config["ACCOUNT"]["aws_secret"]
+            except:
+                logger.warning(
+                    "Missing config file entry: AWS API Key. Needed only for proxies")
+                logger.warning("For more information, see example.config")
 
         except Exception:
             logger.exception("Failed to read config file properly")

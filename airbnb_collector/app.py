@@ -18,8 +18,7 @@ import logging
 import argparse
 import sys
 
-from airbnb_collector.config import ABConfig
-from airbnb_collector.controllers import ABSurvey, ABListing, ABDatabaseController, ABSurveyController, ABSearchAreaController
+from controllers import DatabaseController, SearchAreaController, SearchSurveyController
 
 # ============================================================================
 # CONSTANTS
@@ -47,8 +46,9 @@ from airbnb_collector.controllers import ABSurvey, ABListing, ABDatabaseControll
 # 2.6 adds a bounding box search
 # 2.5 is a bit of a rewrite: classes for ABListing and ABSurvey, and requests lib
 # 2.3 released Jan 12, 2015, to handle a web site update
-SCRIPT_VERSION_NUMBER = "3.7.0"
-# logging = logging.getLogger()
+SCRIPT_VERSION_NUMBER = "0.1.0"
+ 
+logger = logging.getLogger()
 
 class ABCollectorApp:
 
@@ -64,7 +64,7 @@ class ABCollectorApp:
 
                 survey [add|delete|list|run|run_extra]
                 search_area [add|delete|list]
-                db [--check]
+                db [check]
 
             Optional args:
                 -v | --verbose
@@ -114,10 +114,13 @@ class ABCollectorApp:
             description='Manage an airbnb survey')
         args = self.parse_subcommand_args(parser)
 
-        db = ABDatabaseController(args.config)
+        db = DatabaseController(args.config_file)
 
         if(args.subcommand == "check"):            
-            db.db_check_connection()
+            if db.db_check_connection():
+                print("Connection OK")
+            else:
+                print("Something went wront with the DB connection, please check your config file")
         else:
             print("Unrecognized subcommand")
             parser.print_help()
@@ -127,9 +130,11 @@ class ABCollectorApp:
         parser = argparse.ArgumentParser(description='Manage an airbnb survey')
         args = self.parse_subcommand_args(parser)
 
+        survey_controller = SearchSurveyController(args.config_file)
+
         if(args.subcommand == "add"):
             search_area_id = input("search_area_id : ")
-            ABSurveyController(self.config).add_survey(search_area_id)
+            survey_controller.add_survey(search_area_id)
 
         elif(args.subcommand == "delete"):
             survey_id = input("survey_id : ")
@@ -139,13 +144,15 @@ class ABCollectorApp:
             if choice != "y":
                 print("Cancelling the request.")
                 return
-            ABSurveyController.delete_survey(survey_id)
+            survey_controller.delete_survey(survey_id)
 
         elif(args.subcommand == "list"):
             print("list survey")
         elif(args.subcommand == "run"):
             survey_id = input("survey_id : ")
-            ABSurveyController(args.config).run(survey_id)
+            survey_results = survey_controller.search(survey_id)
+            survey_results = survey_controller.save_results(survey_results, survey_id)
+            logger.info(f"{survey_results.total_nb_rooms} parsed, {survey_results.total_nb_saved} saved, {survey_results.total_nb_rooms_expected} expected")
         elif(args.subcommand == "run_extra"):
             print("run extra information search for survey")
         else:
@@ -158,7 +165,7 @@ class ABCollectorApp:
             description='Manage an airbnb search area')
         args = self.parse_subcommand_args(parser)
 
-        sac = ABSearchAreaController(args.config)
+        sac = SearchAreaController(args.config_file)
 
         if(args.subcommand == "add"):
             name = input("search area name: ")
@@ -190,6 +197,5 @@ class ABCollectorApp:
 
 
 if __name__ == "__main__":
-    #ab_config = ABConfig(args.config_file, args.verbose)
     logging.basicConfig(format='%(levelname)-8s%(message)s')
     ABCollectorApp()
