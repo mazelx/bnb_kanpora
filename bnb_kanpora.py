@@ -60,7 +60,7 @@ class ABCollectorApp:
                 db [check]
 
             Optional args:
-                -v | --verbose
+                -v | --verbose
                 -c | --config file <config_file>
                 -V | --version
                 -? | --help
@@ -111,10 +111,12 @@ class ABCollectorApp:
         db = DatabaseController(config)
 
         if(args.subcommand == "check"):            
-            if db.db_check_connection():
+            try:
+                db.db_check_connection()
                 print("Connection OK")
-            else:
-                print("Something went wront with the DB connection, please check your config file")
+            except Exception as e:
+                print("Something went wrong with the DB connection, please check your config file")
+                print(e)
         else:
             print("Unrecognized subcommand")
             parser.print_help()

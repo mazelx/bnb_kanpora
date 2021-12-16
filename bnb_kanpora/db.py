@@ -14,9 +14,5 @@ class DBUtils:
         return True
 
     def check_connection(self):
-        try:
-            self.database.connect()
-            return True
-        except:
-            return False
+        self.database.is_connection_usable()
 
