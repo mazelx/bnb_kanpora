@@ -1,9 +1,0 @@
-lxml==4.6.4
-psycopg2-binary==2.9.1
-configparser==5.1.0
-beautifulsoup4==4.10.0
-boto3==1.19.10
-pandas==1.3.4
-requests==2.26.0
-SQLAlchemy==1.4.26
-pytest==6.2.5pytest
