@@ -97,16 +97,20 @@ col3.metric("Loueurs", len(data_multi_rooms.host_id.unique()))
 
 # Map
 fig_multi_rooms = px.scatter_mapbox(data_multi_rooms, 
-                        lat=data_multi_rooms.latitude,
-                        lon=data_multi_rooms.longitude,
-                        color=data_multi_rooms.has_license,
-                        zoom=12,
-                        size_max=1,
-                        height=500,
-                        color_discrete_sequence=px.colors.qualitative.Pastel
+                                    lat=data.latitude,
+                                    lon=data.longitude,
+                                    color=data.has_license,
+                                    hover_name=data.name,
+                                    hover_data=[data.room_type, data.reviews, data.accommodates, data.license],
+                                    zoom=12,
+                                    size_max=1,
+                                    height=500,
+                                    color_discrete_sequence=px.colors.qualitative.Pastel
                         )
 
-fig_multi_rooms.update_layout(mapbox_accesstoken="pk.eyJ1IjoibWF6ZWx4IiwiYSI6ImNqOG9tODMzYzA1MnAydnBjZG5lYTR4bGwifQ.R7lZcLkJejwX4D4--1yMSA")
+fig_multi_rooms.update_layout(
+    mapbox_accesstoken="pk.eyJ1IjoibWF6ZWx4IiwiYSI6ImNqOG9tODMzYzA1MnAydnBjZG5lYTR4bGwifQ.R7lZcLkJejwX4D4--1yMSA")
+
 
 st.plotly_chart(fig_multi_rooms, use_container_width=True)
 
