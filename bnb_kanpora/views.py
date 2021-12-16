@@ -5,23 +5,23 @@
 # An ABListing represents and individual Airbnb listing
 # ===========================================================================
 
-from models import RoomModel, SurveyModel, SearchAreaModel
+from bnb_kanpora.models import RoomModel, SurveyModel, SearchAreaModel
 
 class ABDatabaseViewer():
     pass
 
 class ABSearchAreaViewer():
-   def print_search_areas():
+    def print_search_areas(self):
        for row in SearchAreaModel.select().order_by(SearchAreaModel.search_area_id):
            print(row)
 
 class ABSurveyViewer():
-   def print_search_areas():
+    def print_surveys(self):
        for row in SurveyModel.select().order_by(SurveyModel.survey_id):
            print(row)
 
 class ABRoomViewer():
-   def print_search_areas():
-       for row in RoomModel.select().order_by(RoomModel.survey_id):
+    def print_rooms(self):
+       for row in RoomModel.select().order_by(RoomModel.room_id):
            print(row)
 

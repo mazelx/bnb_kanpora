@@ -1,6 +1,7 @@
-from airbnb_collector.config import ABConfig
-from airbnb_collector.utils import GeoBox
-from airbnb_collector.controllers import *
+from bnb_kanpora.config import Config
+from bnb_kanpora.utils import GeoBox
+from bnb_kanpora.controllers import *
+from bnb_kanpora.db import MODELS
 import pytest
 import json
 import peewee
@@ -8,30 +9,26 @@ import peewee
 # Tests should be improved to cover edge cases 
 # sample box, smaller to bigger
 #sample_box = GeoBox(w_lng=5.566198, s_lat=47.425706, e_lng=5.617954, n_lat=47.460710) # gray small
-sample_box = GeoBox(w_lng=5.349655,s_lat=47.302050,e_lng=5.828934,n_lat=47.579305) # gray ~50
-#sample_box = GeoBox(e_lng=1.800148,s_lat=46.771898, w_lng=1.581617, n_lat=46.916375) # chateauroux ~180
+#sample_box = GeoBox(w_lng=5.349655,s_lat=47.302050,e_lng=5.828934,n_lat=47.579305) # gray ~50 
+sample_box = GeoBox(e_lng=1.800148,s_lat=46.771898, w_lng=1.581617, n_lat=46.916375) # chateauroux ~180
 #sample_box = GeoBox(e_lng=-1.525514, s_lat=47.192878, w_lng=-1.581819, n_lat=47.227861) # nantes centre
-#sample_box = GeoBox(w_lng=-1.591257,s_lat=43.459428,e_lng=-1.533407,n_lat=43.495925) # btz
 
 @pytest.fixture
 def config():
-    return ABConfig(config_file="test.config", verbose=True)
+    cfg = Config(config_file="test.config", verbose=True)
+    cfg.database.drop_tables(MODELS)
+    cfg.database.create_tables(MODELS)
+    return cfg
 
 @pytest.fixture
 def json_sample():
-    with open('airbnb_collector/test/test_room_sample.json', 'r') as f:
+    with open('bnb_kanpora/test/test_room_sample.json', 'r') as f:
         data = json.load(f)
     return data
 
 @pytest.fixture
-def init(config) -> None:
-    db = DatabaseController(config)
-    db.drop_tables()
-    db.create_tables()
-
-@pytest.fixture
 def abrequest(config):
-    return ABRequest(config)
+    return HTTPRequest(config)
 
 @pytest.fixture
 def search_area_controller(config):
@@ -41,11 +38,11 @@ def search_area_controller(config):
 def search_area(search_area_controller):
     return search_area_controller.add("Gotham City", sample_box)
 
-def test_add_search_area(init, search_area:int):
+def test_add_search_area(config, search_area:int):
     assert isinstance(search_area, int)
     assert search_area > 0
 
-def test_delete_search_area(init, search_area_controller:SearchAreaController, search_area:int):
+def test_delete_search_area(config, search_area_controller:SearchAreaController, search_area:int):
     search_area_controller.delete(search_area)
     with pytest.raises(peewee.DoesNotExist):
         assert SearchAreaModel.get_by_id(search_area)
@@ -59,11 +56,11 @@ def survey_controller(config):
 def survey(survey_controller:SearchSurveyController, search_area:int) -> int:
     return survey_controller.add(search_area)
 
-def test_add_survey(init, survey:int):
+def test_add_survey(config, survey:int):
     assert isinstance(survey, int)
     assert survey > 0
 
-def test_delete_survey(init, survey_controller:SearchSurveyController, survey:int):
+def test_delete_survey(config, survey_controller:SearchSurveyController, survey:int):
     survey_controller.delete(survey)
     with pytest.raises(peewee.DoesNotExist):
         assert SurveyModel.get_by_id(survey)
@@ -78,7 +75,7 @@ def sample_room(result_controller:SearchResultsController, json_sample:dict, sur
     room = result_controller.create_room_from_search_result(json_sample, survey)
     return (survey, room)
 
-def test_create_from_json(init, sample_room):
+def test_create_from_json(config, sample_room):
     survey, room = sample_room
     room_from_db =  RoomModel.get((RoomModel.survey_id == survey) & (RoomModel.room_id == room))
     assert (room_from_db.survey_id.survey_id, room_from_db.room_id) == (1, 32230973)
@@ -88,10 +85,10 @@ def test_create_from_json(init, sample_room):
 def listing_extra_controller(config):
     return ABListingExtraController(config)
 
-def test_search(init, survey_controller:SearchSurveyController, survey:int):
+def test_search(config, survey_controller:SearchSurveyController, survey:int):
     TOLERANCE_MISSING_ROOMS = 0.05
     TOLERANCE_EXCEEDING_ROOMS = -0.1
-    survey_results = survey_controller.search(survey)
+    survey_results = survey_controller.run(survey)
     missing = survey_results.total_nb_rooms_expected - survey_results.total_nb_rooms
     assert (missing / survey_results.total_nb_rooms_expected) < TOLERANCE_MISSING_ROOMS
     assert (missing / survey_results.total_nb_rooms_expected)  > TOLERANCE_EXCEEDING_ROOMS

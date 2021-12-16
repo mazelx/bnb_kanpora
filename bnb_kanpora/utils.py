@@ -124,4 +124,3 @@ class RoomTypes():
     ENTIRE_APT:str = "Entire home/apt"
     PRIVATE_ROOM:str = "Private room"
     SHARED_ROOM:str = "Shared room"
-

@@ -1,26 +1,9 @@
-from config import ABConfig
-from utils import GeoBox
+from bnb_kanpora.utils import GeoBox
 
-from peewee import AutoField, BooleanField, CharField, CompositeKey, ForeignKeyField, Model, PostgresqlDatabase, IntegerField, DecimalField, DateTimeField, SmallIntegerField, TextField, BigIntegerField
+from peewee import AutoField, BooleanField, CharField, CompositeKey, ForeignKeyField, Model, IntegerField, DecimalField, DateTimeField, SmallIntegerField, TextField, BigIntegerField
 from datetime import datetime
 
-# TODO fix object instanciation with config 
-
-cfg = ABConfig()
-database =  PostgresqlDatabase(
-    cfg.DB_NAME, 
-    user=cfg.DB_USER, 
-    password=cfg.DB_PASSWORD,
-    host=cfg.DB_HOST, 
-    port=cfg.DB_PORT,
-    autorollback=True
-)
-
-class BaseModel(Model):
-    class Meta:
-        database = database
-
-class SearchAreaModel(BaseModel):
+class SearchAreaModel(Model):
     class Meta:
         table_name = "search_area"
  
@@ -32,6 +15,9 @@ class SearchAreaModel(BaseModel):
     bb_s_lat = DecimalField(30,6)
     bb_w_lng = DecimalField(30,6)
 
+    def __str__(self):
+        return f"{self.search_area_id} : {self.name}, http://bboxfinder.com/#{self.bb_s_lat},{self.bb_w_lng},{self.bb_n_lat},{self.bb_e_lng}"
+
     @property
     def geobox(self):
         return GeoBox(
@@ -42,7 +28,7 @@ class SearchAreaModel(BaseModel):
         )
 
 
-class SurveyModel(BaseModel):
+class SurveyModel(Model):
     class Meta:
         table_name = "survey"
 
@@ -54,8 +40,11 @@ class SurveyModel(BaseModel):
     status = SmallIntegerField(default=0)
     search_area_id = ForeignKeyField(SearchAreaModel, backref='surveys')
 
+    def __str__(self):
+        return f"Survey: {self.survey_id}: {self.survey_date} - SearchArea:{self.search_area_id} "
 
-class RoomModel(BaseModel):
+
+class RoomModel(Model):
     class Meta:
         table_name = "room"
         primary_key = CompositeKey('survey_id', 'room_id')
@@ -87,7 +76,7 @@ class RoomModel(BaseModel):
     rate_type = CharField(20, null=True)
     picture_url = CharField(200, null=True)
 
-class SurveyProgressModel(BaseModel):
+class SurveyProgressModel(Model):
     class Meta:
         table_name = "survey_progress"
 
@@ -98,26 +87,3 @@ class SurveyProgressModel(BaseModel):
     price_max = DecimalField(52, null=True)
     quadtree_node = CharField(1000)
     last_modified = DateTimeField(default=datetime.now)
-
-class DBUtils:
-    models = [SearchAreaModel, SurveyModel, RoomModel, SurveyProgressModel]
-
-    @staticmethod
-    def create_tables():
-        with database:
-            database.create_tables(DBUtils.models)
-        return True
-
-    @staticmethod
-    def drop_tables():
-        with database:
-            database.drop_tables(DBUtils.models)
-        return True
-
-    @staticmethod
-    def check_connection():
-        try:
-            database.connect()
-            return True
-        except:
-            return False

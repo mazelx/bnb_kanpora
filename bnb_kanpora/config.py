@@ -6,10 +6,14 @@ import logging
 import os
 import configparser
 import sys
+from bnb_kanpora.models import RoomModel, SurveyModel, SearchAreaModel, SurveyProgressModel
+from peewee import PostgresqlDatabase
+
+MODELS = [RoomModel, SurveyModel, SearchAreaModel, SurveyProgressModel]
 
 logger = logging.getLogger()
 
-class ABConfig():
+class Config():
 
     def __init__(self, config_file=None, verbose=False):
         """ Read the configuration file <username>.config to set up the run
@@ -59,11 +63,17 @@ class ABConfig():
 
             # database
             try:
-                self.DB_HOST = config["DATABASE"]["db_host"] if ("db_host" in config["DATABASE"]) else None
-                self.DB_PORT = config["DATABASE"]["db_port"]
-                self.DB_NAME = config["DATABASE"]["db_name"]
-                self.DB_USER = config["DATABASE"]["db_user"]
-                self.DB_PASSWORD = config["DATABASE"]["db_password"]
+                self.database =  PostgresqlDatabase(
+                    config["DATABASE"]["db_name"], 
+                    user=config["DATABASE"]["db_user"], 
+                    password=config["DATABASE"]["db_password"],
+                    host=config["DATABASE"]["db_host"] if ("db_host" in config["DATABASE"]) else None, 
+                    port=config["DATABASE"]["db_port"],
+                    autorollback=True
+                )
+                self.database.bind(MODELS)
+                self.database.connect()
+                self.database.create_tables(MODELS)
             except Exception:
                 logger.error("Incomplete database information in %s: cannot continue",
                              self.config_file)

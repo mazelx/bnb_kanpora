@@ -1,24 +1,17 @@
 #!/usr/bin/python3
 # ============================================================================
 # Airbnb web site scraper, for analysis of Airbnb listings
-# Tom Slee, 2013--2015.
-#
-# function naming conventions:
-#   ws_get = get from web site
-#   db_get = get from database
-#   db_add = add to the database
-#
-# function name conventions:
-#   add = add to database
-#   display = open a browser and show
-#   list = get from database and print
-#   print = get from web site and print
+# Xavier Mazellier, Tom Slee, 2013--2015.
+# WIP
 # ============================================================================
 import logging
 import argparse
 import sys
+from bnb_kanpora.config import Config
 
-from controllers import DatabaseController, SearchAreaController, SearchSurveyController
+from bnb_kanpora.controllers import DatabaseController, SearchAreaController, SearchSurveyController
+from bnb_kanpora.views import ABSearchAreaViewer, ABSurveyViewer
+from bnb_kanpora.utils import GeoBox
 
 # ============================================================================
 # CONSTANTS
@@ -26,7 +19,7 @@ from controllers import DatabaseController, SearchAreaController, SearchSurveyCo
 
 # Script version
 
-# 4.0 Nov 2021: WIP
+# 4.0 Nov 2021: Fork, WIP by Xavier Mazellier
 
 # 3.6 May 2019: Fixed problem where pagination was wrong because of a change in 
 # the Airbnb web site.
@@ -89,7 +82,7 @@ class ABCollectorApp:
                             action="store_true", default=False,
                             help="""write verbose (debug) output to the log file""")
         parser.add_argument("-c", "--config_file",  
-                            metavar="config_file", action="store", default=None,
+                            metavar="config_file", action="store", default="./app.config",
                             help="""explicitly set configuration file, instead of
                             using the default <username>.config""")
         parser.add_argument('-V', '--version',
@@ -113,8 +106,9 @@ class ABCollectorApp:
         parser = argparse.ArgumentParser(
             description='Manage an airbnb survey')
         args = self.parse_subcommand_args(parser)
-
-        db = DatabaseController(args.config_file)
+        
+        config = Config(args.config_file)
+        db = DatabaseController(config)
 
         if(args.subcommand == "check"):            
             if db.db_check_connection():
@@ -130,13 +124,18 @@ class ABCollectorApp:
         parser = argparse.ArgumentParser(description='Manage an airbnb survey')
         args = self.parse_subcommand_args(parser)
 
-        survey_controller = SearchSurveyController(args.config_file)
+        config = Config(args.config_file)
+        survey_controller = SearchSurveyController(config)
+        survey_viewer = ABSurveyViewer()
+        search_area_viewer = ABSearchAreaViewer()
 
         if(args.subcommand == "add"):
+            search_area_viewer.print_search_areas()
             search_area_id = input("search_area_id : ")
-            survey_controller.add_survey(search_area_id)
+            survey_controller.add(search_area_id)
 
         elif(args.subcommand == "delete"):
+            survey_viewer.print_surveys()
             survey_id = input("survey_id : ")
             question = "Are you sure you want to delete listings for survey {}? [y/N] ".format(survey_id)
             sys.stdout.write(question)
@@ -144,15 +143,16 @@ class ABCollectorApp:
             if choice != "y":
                 print("Cancelling the request.")
                 return
-            survey_controller.delete_survey(survey_id)
+            survey_controller.delete(survey_id)
 
         elif(args.subcommand == "list"):
-            print("list survey")
+            survey_viewer.print_surveys()
+            
         elif(args.subcommand == "run"):
+            survey_viewer.print_surveys()
             survey_id = input("survey_id : ")
-            survey_results = survey_controller.search(survey_id)
-            survey_results = survey_controller.save_results(survey_results, survey_id)
-            logger.info(f"{survey_results.total_nb_rooms} parsed, {survey_results.total_nb_saved} saved, {survey_results.total_nb_rooms_expected} expected")
+            results = survey_controller.run(survey_id)
+            logger.info(f"{results.total_nb_rooms} parsed, {results.total_nb_saved} saved, {results.total_nb_rooms_expected} expected")
         elif(args.subcommand == "run_extra"):
             print("run extra information search for survey")
         else:
@@ -165,31 +165,36 @@ class ABCollectorApp:
             description='Manage an airbnb search area')
         args = self.parse_subcommand_args(parser)
 
-        sac = SearchAreaController(args.config_file)
+        config = Config(args.config_file)
+        sac = SearchAreaController(config)
+        search_area_viewer = ABSearchAreaViewer()
 
         if(args.subcommand == "add"):
             name = input("search area name: ")
 
             def get_box_coordinates():
-                box_str = input("east_lng, west_lng, north_lat, ssouth_lat (copy-paste box value from http://bboxfinder.com): ")
+                box_str = input("south, west, north, east (copy-paste coordinates after # in URL from http://bboxfinder.com): ")
                 try:
                     arr = [float(s) for s in box_str.split(',')]
                     if(len(arr) != 4):
                         raise
+                    return tuple(arr)
                 except:
-                    print("Please enter a sequence of latitude and longitude coordinates using the following format: east, south, west, north")
                     return 0,0,0,0
             
-            bb_e_lng, bb_s_lat, bb_w_lng, bb_n_lat = get_box_coordinates()
-            while not(bb_w_lng > bb_e_lng and bb_n_lat > bb_s_lat):
+            s_lat, w_lng, n_lat, e_lng = get_box_coordinates()
+            while not(e_lng > w_lng and n_lat > s_lat):
                 print("Validation failed for the following rule : west_lng > east_lng and north_lat  > south_lat")
-                bb_e_lng, bb_s_lat, bb_w_lng, bb_n_lat  = get_box_coordinates()
+                s_lat, w_lng, n_lat, e_lng  = get_box_coordinates()
 
-            sac.add_search_area(name, bb_e_lng, bb_s_lat, bb_w_lng, bb_n_lat)
+            sac.add(name, GeoBox(s_lat=s_lat, w_lng=w_lng, n_lat=n_lat, e_lng=e_lng))
         elif(args.subcommand == "list"):
-            print("list search area")
-        elif(args.subcommand == "display"):
-            print("display search area")
+            search_area_viewer.print_search_areas()
+        elif(args.subcommand == "delete"):
+            search_area_viewer.print_search_areas()
+            search_area_id = input("search area id to delete: ")
+            sac.delete(search_area_id)
+
         else:
             print("Unrecognized subcommand")
             parser.print_help() 

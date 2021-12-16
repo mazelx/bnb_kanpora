@@ -11,8 +11,8 @@ import requests
 import json
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
-from config import ABConfig
-from utils import GeoBox, SearchResults
+from bnb_kanpora.config import Config
+from bnb_kanpora.utils import GeoBox, SearchResults
 
 # Set up logging
 logger = logging.getLogger()
@@ -24,9 +24,9 @@ MAX_RETRY_FOR_SESSION = 3
 BACK_OFF_FACTOR = 0.2
 TIME_BETWEEN_RETRIES = 1000
 
-class ABRequest():
+class HTTPRequest():
 
-    def __init__(self, config:ABConfig) -> None:
+    def __init__(self, config:Config) -> None:
         self.config = config
         self.session = self._get_session()
 

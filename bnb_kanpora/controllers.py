@@ -5,10 +5,11 @@
 # An ABListing represents and individual Airbnb listing
 # ===========================================================================
 
-from http_requests import ABRequest
-from config import ABConfig
-from models import RoomModel, SurveyModel, SurveyProgressModel, SearchAreaModel, DBUtils
-from utils import GeoBox, SearchResults, SurveyResults
+from bnb_kanpora.http_requests import HTTPRequest
+from bnb_kanpora.config import Config
+from bnb_kanpora.models import RoomModel, SurveyModel, SearchAreaModel
+from bnb_kanpora.db import DBUtils
+from bnb_kanpora.utils import GeoBox, SearchResults, SurveyResults
 
 import logging
 import re
@@ -17,6 +18,8 @@ import json
 import datetime
 import time
 import peewee
+
+from bnb_kanpora.views import ABSurveyViewer
 
 logger = logging.getLogger()
 
@@ -29,18 +32,18 @@ class DatabaseController():
         config: Config
             Configuration object
     """
-    def __init__(self, config: ABConfig) -> None:
+    def __init__(self, config: Config) -> None:
         self.config = config
 
     ## DB
     def db_check_connection(self) -> bool:
-        return DBUtils.check_connection()
+        return DBUtils(self.config).check_connection()
 
     def create_tables(self) -> None:
-        DBUtils.create_tables()
+        DBUtils(self.config).create_tables()
 
     def drop_tables(self) -> None:
-        DBUtils.drop_tables()
+        DBUtils(self.config).drop_tables()
 
 
 class SearchAreaController():
@@ -56,7 +59,7 @@ class SearchAreaController():
         add(search_area_name:str, geography:Geobox) -> int
         delete(search_area_id) -> bool
     """
-    def  __init__(self, config:ABConfig) -> None:
+    def  __init__(self, config:Config) -> None:
         config.self = config
 
     ### Search Area
@@ -85,7 +88,7 @@ class SearchAreaController():
                 bb_e_lng = geobox.e_lng,
                 bb_w_lng = geobox.w_lng
             )
-            print(f"Search area created with following id : {search_area}")
+            print(f"Search area created: {search_area}")
             return search_area.search_area_id
 
         except Exception:
@@ -93,7 +96,7 @@ class SearchAreaController():
             raise
 
     def delete(self, search_area_id:int) -> bool:
-        SearchAreaModel.get(search_area_id).delete_instance() > 0
+        SearchAreaModel.get_by_id(search_area_id).delete_instance() > 0
 
 
 class SearchSurveyController():
@@ -112,13 +115,13 @@ class SearchSurveyController():
         search_box(geobox:GeoBox, survey_id:int) -> int
     """
 
-    def __init__(self, config:ABConfig) -> None:
+    def __init__(self, config:Config) -> None:
         # Set up logging
         logger.setLevel(config.log_level)
 
         self.search_node_counter = 0
         self.config = config
-        self.request = ABRequest(config)
+        self.request = HTTPRequest(config)
         #self.logged_progress = self._get_logged_progress()
         #self.bounding_box = self._get_bounding_box()
     
@@ -132,70 +135,13 @@ class SearchSurveyController():
         return rows_deleted == 1
 
     def run(self, survey_id:int) -> int:
-        """
-        Initialize bounding box search.
-        A bounding box is a rectangle around a city, specified in the
-        search_area table. The loop goes to quadrants of the bounding box
-        rectangle and, if new listings are found, breaks that rectangle
-        into four quadrants and tries again, recursively.
-        The rectangles, including the bounding box, are represented by
-        [n_lat, e_lng, s_lat, w_lng], because Airbnb uses the SW and NE
-        corners of the box.
-        """
-        
-        # create a file handler
-        logfile = f"survey-{survey_id}.log"
-        filelog_handler = logging.FileHandler(logfile, encoding="utf-8")
-        filelog_handler.setLevel(self.config.log_level)
-        filelog_formatter = logging.Formatter('%(asctime)-15s %(levelname)-8s%(message)s')
-        filelog_handler.setFormatter(filelog_formatter)
+            survey:SurveyModel = SurveyModel.get_by_id(survey_id)
+            search_area:SearchAreaModel = survey.search_area_id
+            survey_results = self.search(search_area.geobox)
+            survey_results = self.save_results(survey_results, survey_id)
+            return survey_results
 
-        # logging: set log file name, format, and level
-        logger.addHandler(filelog_handler)
-
-        # Suppress informational logging from requests module
-        logging.getLogger("requests").setLevel(logging.WARNING)
-        logging.getLogger("urllib3").setLevel(logging.WARNING)
-        logger.propagate = False
-
-        survey = SurveyModel.get_by_id(survey_id)
-        logger.info("=" * 70)
-        logger.info(f"Survey {survey.survey_id}, for {survey.search_area_id.name}")
-        
-        survey.survey_date = datetime.datetime.now()
-        survey.save()
-
-        logger.info("Searching by bounding box, max_zoom=%s",
-                    self.config.SEARCH_MAX_RECTANGLE_ZOOM)
-
-        # Initialize search parameters
-        # quadtree_node holds the quadtree: each rectangle is
-        # divided into 00 | 01 | 10 | 11, and the next level down adds
-        # set starting point
-        quadtree_node = [] # list of [0,0] etc coordinates
-        #median_node = [] # median lat, long to define optimal quadrants
-        # set starting point for survey being resumed
-        logged_progress = SurveyProgressModel.select().where(SurveyProgressModel.survey_id == survey_id)
-
-        if logged_progress:
-            logger.info("Restarting incomplete survey")
-        
-        for room_type in self.ROOM_TYPES:
-            logger.info("-" * 70)
-            logger.info("Beginning of search for %s", room_type)
-            self.search()
-            self._search_quadtree(quadtree_node, room_type)
-    
-        try:
-            survey.date = RoomModel.select(peewee.fn.Min(RoomModel.last_modified)).where(RoomModel.survey_id == survey.survey_id)
-            survey.status = 1
-            survey.save()
-            return True
-        except:
-            logger.exception("Survey run failed")
-            return False
-
-    def search(self, survey_id, tree_idx:str = '0', survey_results:SurveyResults=SurveyResults()) -> SurveyResults:
+    def search(self, geobox:GeoBox, tree_idx:str = '0', survey_results:SurveyResults=SurveyResults()) -> SurveyResults:
         """Search for a geographical bounding box
 
         Keyword arguments:
@@ -203,9 +149,7 @@ class SearchSurveyController():
         survey_id:int -- survey id
         tree_idx:str -- Recursive index, root is 0, childs are 0-0, 0-1, 0-2, 0-3, childs of childs are 0-0-1, 0-0-2, ... and so on
         """
-        survey:SurveyModel = SurveyModel.get_by_id(survey_id)
-        search_area:SearchAreaModel = survey.search_area_id
-        results = self._search_box(search_area.geobox)
+        results = self._search_box(geobox)
         
         survey_results.search_results[tree_idx] = results
         logger.info(f"{tree_idx} - {len(results.rooms)} on {results.nb_rooms_expected}")
@@ -214,7 +158,7 @@ class SearchSurveyController():
         # TODO get the expected nb rooms from first query and directly split the box
         if len(results.rooms) >= (self.config.SEARCH_MAX_PAGES * self.config.SEARCH_LISTINGS_ON_FULL_PAGE):
             # replace last box with 4-split 
-            for idx, child_bbox in enumerate(search_area.geobox.get_four_splits(enlarge_pct=0)):
+            for idx, child_bbox in enumerate(geobox.get_four_splits(enlarge_pct=0)):
                 self.search(geobox=child_bbox, 
                             tree_idx = f"{tree_idx}-{idx}", 
                             survey_results = survey_results)
@@ -271,7 +215,7 @@ class SearchResultsController():
     ---
         create_room_from_search_result(search_result:dict, survey_id:int) -> int
     """
-    def __init__(self, config:ABConfig) -> None:
+    def __init__(self, config:Config) -> None:
         self.config = config
         """ """
         logger.setLevel(config.log_level)
@@ -320,7 +264,7 @@ class SearchResultsController():
 
 
 class ABListingExtraController():
-    def __init__(self, config:ABConfig) -> None:
+    def __init__(self, config:Config) -> None:
         """ Get the room properties from the web site """
         self.config = config
 
@@ -353,7 +297,8 @@ class ABListingExtraController():
             room = RoomModel.get((RoomModel.room_id == room_id) & (RoomModel.survey_id == survey_id))
 
             room_url = self.config.URL_ROOM_ROOT + str(room.room_id)
-            response = ABRequest(self.config).ws_request_with_repeats(room_url)
+            response = HTTPRequest
+            (self.config).ws_request_with_repeats(room_url)
             if response is not None:
                 page = response.text
                 tree = html.fromstring(page)
