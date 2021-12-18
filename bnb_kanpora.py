@@ -55,7 +55,7 @@ class ABCollectorApp:
         
             Available commands:
 
-                survey [add|delete|list|run|run_extra]
+                survey [add|delete|list|run|run_extra|export]
                 search_area [add|delete|list]
                 db [check]
 
@@ -157,6 +157,9 @@ class ABCollectorApp:
             logger.info(f"{results.total_nb_rooms} parsed, {results.total_nb_saved} saved, {results.total_nb_rooms_expected} expected")
         elif(args.subcommand == "run_extra"):
             print("run extra information search for survey")
+        elif(args.subcommand == "export"):
+            survey_id = input("survey_id : ")
+            survey_controller.export(survey_id)
         else:
             print("Unrecognized subcommand")
             parser.print_help()

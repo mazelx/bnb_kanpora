@@ -2,15 +2,19 @@ from bnb_kanpora.config import Config
 from bnb_kanpora.utils import GeoBox
 from bnb_kanpora.controllers import *
 from bnb_kanpora.db import MODELS
+from os import path
+import os
+import shutil
 import pytest
 import json
 import peewee
+import pandas as pd
 
 # Tests should be improved to cover edge cases 
 # sample box, smaller to bigger
 #sample_box = GeoBox(w_lng=5.566198, s_lat=47.425706, e_lng=5.617954, n_lat=47.460710) # gray small
-#sample_box = GeoBox(w_lng=5.349655,s_lat=47.302050,e_lng=5.828934,n_lat=47.579305) # gray ~50 
-sample_box = GeoBox(e_lng=1.800148,s_lat=46.771898, w_lng=1.581617, n_lat=46.916375) # chateauroux ~180
+sample_box = GeoBox(w_lng=5.349655,s_lat=47.302050,e_lng=5.828934,n_lat=47.579305) # gray ~50 
+#sample_box = GeoBox(e_lng=1.800148,s_lat=46.771898, w_lng=1.581617, n_lat=46.916375) # chateauroux ~180
 #sample_box = GeoBox(e_lng=-1.525514, s_lat=47.192878, w_lng=-1.581819, n_lat=47.227861) # nantes centre
 
 @pytest.fixture
@@ -85,10 +89,28 @@ def test_create_from_json(config, sample_room):
 def listing_extra_controller(config):
     return ABListingExtraController(config)
 
-def test_search(config, survey_controller:SearchSurveyController, survey:int):
+def test_search_and_export(config, survey_controller:SearchSurveyController, survey:int):
     TOLERANCE_MISSING_ROOMS = 0.05
     TOLERANCE_EXCEEDING_ROOMS = -0.1
+    EXPORT_FOLDER = "test-export"
     survey_results = survey_controller.run(survey)
     missing = survey_results.total_nb_rooms_expected - survey_results.total_nb_rooms
     assert (missing / survey_results.total_nb_rooms_expected) < TOLERANCE_MISSING_ROOMS
     assert (missing / survey_results.total_nb_rooms_expected)  > TOLERANCE_EXCEEDING_ROOMS
+    
+    #export
+    exported_df_size = 0
+    try:
+        if path.exists(EXPORT_FOLDER):
+            shutil.rmtree(EXPORT_FOLDER)
+        os.mkdir(EXPORT_FOLDER)
+        export_path = survey_controller.export(survey, folder=EXPORT_FOLDER)
+        exported_df_size = len(pd.read_csv(export_path))
+    except Exception as e:
+        pass
+    finally:
+        shutil.rmtree(EXPORT_FOLDER)
+    assert exported_df_size > 0
+    
+
+
