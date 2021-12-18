@@ -24,8 +24,7 @@ st.set_page_config(layout='wide')
 
 @st.cache
 def load_data(nrows=None):
-    survey_id = sys.argv[1]
-    path = f'export/rooms_{survey_id}.csv'
+    path = sys.argv[1]
     try:
         data = pd.read_csv(path)
         if nrows:
