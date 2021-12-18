@@ -24,7 +24,7 @@ class RoomTypes():
 
 st.set_page_config(layout='wide')
 
-st.title('Alda - Observatoire des locations AirBNB - Biarritz Anglet Bayonne')
+st.title('Observatoire des locations AirBNB - Biarritz Anglet Bayonne')
 st.markdown("#")
 
 @st.cache
