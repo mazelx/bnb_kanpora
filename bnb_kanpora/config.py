@@ -7,7 +7,7 @@ import os
 import configparser
 import sys
 from bnb_kanpora.models import RoomModel, SurveyModel, SearchAreaModel, SurveyProgressModel
-from peewee import PostgresqlDatabase
+from playhouse.sqlite_ext import SqliteExtDatabase
 
 MODELS = [RoomModel, SurveyModel, SearchAreaModel, SurveyProgressModel]
 
@@ -45,14 +45,11 @@ class Config():
 
             # database
             try:
-                self.database =  PostgresqlDatabase(
-                    config["DATABASE"]["db_name"], 
-                    user=config["DATABASE"]["db_user"], 
-                    password=config["DATABASE"]["db_password"],
-                    host=config["DATABASE"]["db_host"] if ("db_host" in config["DATABASE"]) else None, 
-                    port=config["DATABASE"]["db_port"],
-                    autorollback=True
-                )
+                self.database =   SqliteExtDatabase(f'{config["DATABASE"]["db_name"]}.db', pragmas=(
+                    ('cache_size', -1024 * 64),  # 64MB page-cache.
+                    ('journal_mode', 'wal'),  # Use WAL-mode (you should always use this!).
+                    ('foreign_keys', 1)) # Enforce foreign-key constraints.
+                )  
                 self.database.bind(MODELS)
                 self.database.connect()
                 self.database.create_tables(MODELS)
