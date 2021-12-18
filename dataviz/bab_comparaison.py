@@ -12,6 +12,8 @@ import pandas as pds
 import numpy as np
 import pydeck as pdk
 import plotly.express as px
+import sqlite3
+
 
 NB_COLS = 3
 @dataclass
@@ -24,12 +26,13 @@ class RoomTypes():
 
 st.set_page_config(layout='wide')
 
-st.title('Alda - Observatoire des locations AirBNB - Biarritz Anglet Bayonne')
+st.title('Observatoire des locations AirBNB - Biarritz Anglet Bayonne')
 st.markdown("#")
 
 @st.cache
 def load_data(nrows=None):
-    conn = psycopg2.connect(database='airbnb', user="airbnb", password="airbnb", host="127.0.0.1", port="5432")
+    #conn = psycopg2.connect(database='airbnb', user="airbnb", password="airbnb", host="127.0.0.1", port="5432")
+    conn = sqlite3.connect('bnb_kanpora.db')
     data = pd.read_sql_query(
         """
         select 
@@ -39,7 +42,7 @@ def load_data(nrows=None):
             inner join survey on survey.survey_id = room.survey_id
             inner join search_area on search_area.search_area_id = survey.search_area_id
         where 
-            survey.survey_id = 3
+            survey.survey_id = 1
         """
     ,con=conn)
     if nrows:

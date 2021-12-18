@@ -47,3 +47,9 @@ googlemaps.py
 .dockerignore
 env/
 TODO
+<<<<<<< Updated upstream
+*.db*
+=======
+*.db
+*.db-*
+>>>>>>> Stashed changes
