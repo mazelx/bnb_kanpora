@@ -48,7 +48,8 @@ class RoomModel(Model):
     class Meta:
         table_name = "room"
         primary_key = CompositeKey('survey_id', 'room_id')
-
+    
+    survey_id = ForeignKeyField(SurveyModel, backref='rooms')
     room_id = BigIntegerField()
     host_id = BigIntegerField()
     name = CharField(255)
@@ -69,12 +70,16 @@ class RoomModel(Model):
     last_modified = DateTimeField(default=datetime.now)
     latitude = DecimalField(30,6)
     longitude = DecimalField(30,6)
-    survey_id = ForeignKeyField(SurveyModel, backref='rooms')
     coworker_hosted = IntegerField(null=True)
     extra_host_languages = CharField(100, null=True)
     currency = CharField(20, null=True)
     rate_type = CharField(20, null=True)
     picture_url = CharField(200, null=True)
+    pdp_type = CharField(200, null=True)
+    pdp_url_type = CharField(200, null=True)
+    rate = DecimalField(5,2, null=True)
+    rate_with_service_fee = DecimalField(5,2, null=True)
+    currency = CharField(5, null=True)
 
 class SurveyProgressModel(Model):
     class Meta:

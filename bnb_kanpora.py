@@ -13,32 +13,6 @@ from bnb_kanpora.controllers import DatabaseController, SearchAreaController, Se
 from bnb_kanpora.views import ABSearchAreaViewer, ABSurveyViewer
 from bnb_kanpora.utils import GeoBox
 
-# ============================================================================
-# CONSTANTS
-# ============================================================================
-
-# Script version
-
-# 4.0 Nov 2021: Fork, WIP by Xavier Mazellier
-
-# 3.6 May 2019: Fixed problem where pagination was wrong because of a change in 
-# the Airbnb web site.
-# 3.5 July 2018: Added column to room table for rounded-off latitude and
-# longitude, and additional location table for Google reverse geocode addresses
-# 3.4 June 2018: Minor tweaks, but now know that Airbnb searches do not return
-#                listings for which there are no available dates.
-# 3.3 April 2018: Changed to use /api/ for -sb if key provided in config file
-# 3.2 April 2018: fix for modified Airbnb site. Avoided loops over room types
-#                 in -sb
-# 3.1 provides more efficient "-sb" searches, avoiding loops over guests and
-# prices. See example.config for details, and set a large max_zoom (eg 12).
-# 3.0 modified -sb searches to reflect new Airbnb web site design (Jan 2018)
-# 2.9 adds resume for bounding box searches. Requires new schema
-# 2.8 makes different searches subclasses of ABSurvey
-# 2.7 factors the Survey and Listing objects into their own modules
-# 2.6 adds a bounding box search
-# 2.5 is a bit of a rewrite: classes for ABListing and ABSurvey, and requests lib
-# 2.3 released Jan 12, 2015, to handle a web site update
 SCRIPT_VERSION_NUMBER = "0.1.0"
  
 logger = logging.getLogger()
@@ -55,7 +29,7 @@ class ABCollectorApp:
         
             Available commands:
 
-                survey [add|delete|list|run|run_extra|export]
+                survey [run|delete|list|run_extra|export]
                 search_area [add|delete|list]
                 db [check]
 
@@ -131,12 +105,7 @@ class ABCollectorApp:
         survey_viewer = ABSurveyViewer()
         search_area_viewer = ABSearchAreaViewer()
 
-        if(args.subcommand == "add"):
-            search_area_viewer.print_search_areas()
-            search_area_id = input("search_area_id : ")
-            survey_controller.add(search_area_id)
-
-        elif(args.subcommand == "delete"):
+        if(args.subcommand == "delete"):
             survey_viewer.print_surveys()
             survey_id = input("survey_id : ")
             question = "Are you sure you want to delete listings for survey {}? [y/N] ".format(survey_id)
@@ -151,12 +120,15 @@ class ABCollectorApp:
             survey_viewer.print_surveys()
             
         elif(args.subcommand == "run"):
-            survey_viewer.print_surveys()
-            survey_id = input("survey_id : ")
+            search_area_viewer.print_search_areas()
+            search_area_id = input("search_area_id : ")
+            survey_id = survey_controller.add(search_area_id)
             results = survey_controller.run(survey_id)
             logger.info(f"{results.total_nb_rooms} parsed, {results.total_nb_saved} saved, {results.total_nb_rooms_expected} expected")
+        
         elif(args.subcommand == "run_extra"):
             print("run extra information search for survey")
+        
         elif(args.subcommand == "export"):
             survey_viewer.print_surveys()
             survey_id = input("survey_id : ")
