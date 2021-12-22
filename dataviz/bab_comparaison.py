@@ -1,45 +1,45 @@
 from pandas.core.frame import DataFrame
+
 import streamlit as st
 from streamlit_folium import folium_static
 import folium
 from dataclasses import dataclass
-
-import sys
-import streamlit as st
+from pathlib import Path
 import pandas as pd
+import s3fs
 
 NB_COLS = 3
 COLOR_GREEN = '#9ad9a3'
 COLOR_RED = '#e86b6b'
 CITIES = ['Biarritz', 'Anglet', 'Bayonne']
+PATH = f's3://kanpora-data/bab/rooms_current.csv'
 
 @dataclass
 class RoomTypes():
-    ENTIRE_APT:str = "Entire home/apt"
-    PRIVATE_ROOM:str = "Private room"
-    SHARED_ROOM:str = "Shared room"
-    HOTEL_ROOM:str = "Hotel room"
+    ENTIRE_APT:str = "Logement entier"
+    PRIVATE_ROOM:str = "Chambre privée"
+    SHARED_ROOM:str = "Chambre partagée"
+    HOTEL_ROOM:str = "Chambre d'hôtel"
 
 st.set_page_config(layout='wide')
 
-@st.cache
+@st.cache(ttl=660)
 def load_data(nrows=None):
-    path = sys.argv[1]
-    try:
-        data = pd.read_csv(path)
-        if nrows:
-            data = data.head(nrows)
-        data['license'].fillna("", inplace=True)
-        data['has_license'] = data.license.str.len() > 6
-        data['city'] = data.city.str.title().str.strip()
-        data = data[data.city.isin(CITIES)]
-        return data
-    except FileNotFoundError:
-        st.write(f"Source file not found {path})")
-    return DataFrame()
+    data = pd.read_csv(PATH)
+    if nrows:
+        data = data.head(nrows)
+    data['license'].fillna("", inplace=True)
+    data['has_license'] = data.license.str.len() > 6
+    data['city'] = data.city.str.title().str.strip()
+    data = data[data.city.isin(CITIES)]
+    return data
 
 # Create a text element and let the reader know the data is loading.
-raw_data = load_data()
+raw_data = DataFrame()
+try:
+    raw_data = load_data()
+except FileNotFoundError:
+    st.write(f"Source file not found {PATH}")
 
 st.title('Observatoire des locations AirBNB')
 if(len(raw_data) <1):

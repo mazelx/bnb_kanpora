@@ -39,7 +39,7 @@ class HTTPRequest():
         params["auto_ib"] = str(False)
         params["children"] = str(0)
         params["client_session_id"] = self.config.CLIENT_SESSION_ID
-        # params["currency"] = "CAD"
+        params["currency"] = "EUR"
         params["experiences_per_grid"] = str(20)
         params["federated_search_session_id"] = "45de42ea-60d4-49a9-9335-9e52789cd306"
         params["fetch_filters"] = str(True)
@@ -52,7 +52,7 @@ class HTTPRequest():
         params["is_standard_search"] = str(True)
         #params["items_offset"] = str(18)
         params["items_per_grid"] = str(18)
-        # params["locale"] = "en-CA"
+        params["locale"] = "fr-FR"
         params["key"] = self.config.API_KEY
         params["luxury_pre_launch"] = str(False)
         params["metadata_only"] = str(False)
@@ -67,6 +67,7 @@ class HTTPRequest():
         params["timezone_offset"] = "-240"
         params["screen_size"] = "medium"
         params["zoom"] = str(True)
+        params["treatmentFlags"] = str(["flex_destinations_june_2021_launch_web_treatment","new_filter_bar_v2_fm_header","merch_header_breakpoint_expansion_web","flexible_dates_12_month_lead_time","storefronts_nov23_2021_homepage_web_treatment","flexible_dates_options_extend_one_three_seven_days","super_date_flexibility","micro_flex_improvements","micro_flex_show_by_default","search_input_placeholder_phrases","pets_fee_treatment"])
         # params["version"] = "1.4.8"
         
         if geobox:

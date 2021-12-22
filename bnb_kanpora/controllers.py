@@ -239,9 +239,25 @@ class SearchResultsController():
         Some fields occasionally extend beyond the varchar(255) limit.
         """
         room_dict = search_result["listing"]
+        rate = None
+        currency = None
+        if search_result["pricing_quote"]:
+            if search_result["pricing_quote"].get('rate'):
+                rate = search_result["pricing_quote"].get('rate').get('amount')
+                currency = search_result["pricing_quote"].get('rate').get('currency')
 
+        rate_with_service_fee = None
+        if search_result["pricing_quote"]:
+            if search_result["pricing_quote"].get('rate_with_service_fee'):
+                rate_with_service_fee = search_result["pricing_quote"].get('rate_with_service_fee').get('amount')
+
+        if room_dict.get("id") == 19862073:
+            logger.debug("yep")
+        # property_type_id : 1
+        # tier id : 0
+        # listing_obj_type : 'REGULAR'
         try:
-            room = RoomModel.create(   
+            room = RoomModel.create(
                 room_id = room_dict.get("id"),
                 room_type = room_dict.get("room_type"),
                 host_id = room_dict.get("user").get("id") if room_dict.get("room_type") else None,
@@ -260,7 +276,12 @@ class SearchResultsController():
                 city = room_dict.get("localized_city") or room_dict.get("city"), # TODO check 'localized_city'
                 picture_url = room_dict.get("picture_url"),
                 neighborhood = room_dict.get("neighborhood"),
-                survey_id = survey_id,
+                pdp_type = room_dict.get('pdp_type'),
+                pdp_url_type = room_dict.get('pdp_url_type'),
+                rate = rate,
+                rate_with_service_fee = rate_with_service_fee,
+                currency = currency,
+                survey_id = survey_id
             )
             return room.room_id
         except peewee.IntegrityError as e:
