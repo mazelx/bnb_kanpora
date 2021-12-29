@@ -197,7 +197,7 @@ class SearchSurveyController():
             for room in search_results.rooms:
                 room_id = int(room["listing"]["id"])
                 if room_id is not None: 
-                    listing_id = SearchResultsController(self.config).create_room_from_search_result(room, survey_id)
+                    listing_id = SearchResultsController(self.config).parse_room_from_search_result(room, survey_id)
                     if listing_id:
                         nb_saved += 1  
         survey_results.total_nb_saved = nb_saved
@@ -227,74 +227,72 @@ class SearchResultsController():
 
     Methods:
     ---
-        create_room_from_search_result(search_result:dict, survey_id:int) -> int
+        parse_room_from_search_result(search_result:dict, survey_id:int) -> int
     """
     def __init__(self, config:Config) -> None:
         self.config = config
         """ """
         logger.setLevel(config.log_level)
 
-    def create_room_from_search_result(self, search_result:dict, survey_id:int) -> int :
+    def parse_room_from_search_result(self, search_result:dict, survey_id:int) -> int :
         """
         Some fields occasionally extend beyond the varchar(255) limit.
         """
-        room_dict = search_result["listing"]
-        rate = None
-        currency = None
-        if search_result["pricing_quote"]:
-            if search_result["pricing_quote"].get('rate'):
-                rate = search_result["pricing_quote"].get('rate').get('amount')
-                currency = search_result["pricing_quote"].get('rate').get('currency')
 
-        rate_with_service_fee = None
-        if search_result["pricing_quote"]:
-            if search_result["pricing_quote"].get('rate_with_service_fee'):
-                rate_with_service_fee = search_result["pricing_quote"].get('rate_with_service_fee').get('amount')
+        key_mappings = {
+            'room_id' : ['listing','id'],
+            'room_type' : ['listing','room_type'],
+            'host_id' : ['listing', 'user','id'],
+            'address' : ['listing','public_address'],
+            'reviews' : ['listing','reviews_count'],
+            'overall_satisfaction' : ['listing','star_rating'],
+            'accommodates' : ['listing','person_capacity'],
+            'bedrooms' : ['listing','bedrooms'],
+            'bathrooms' : ['listing','bathrooms'],
+            'latitude' : ['listing','lat'],
+            'longitude' : ['listing','lng'],
+            'coworker_hosted' : ['listing','coworker_hosted'],
+            'extra_host_languages' : ['listing','extra_host_languages'],
+            'name' : ['listing','name'],
+            'license' : ['listing','license'],
+            'city' : ['listing','localized_city'],
+            'picture_url' : ['listing','picture_url'],
+            'neighborhood' : ['listing','neighborhood'],
+            'pdp_type' : ['listing','pdp_type'],
+            'pdp_url_type' : ['listing','pdp_url_type'],
+            'rate' : ['pricing_quote','rate', 'amount'],
+            'rate_with_service_fee' : ['pricing_quote','rate_with_service_fee', 'amount'],
+            'currency' : ['pricing_quote', 'rate', 'currency'],
+            'weekly_price_factor' : ['pricing_quote', 'weekly_price_factor'],
+            'monthly_price_factor' : ['pricing_quote', 'monthly_price_factor'],
+            'min_nights' : ['listing','min_nights'],
+            'max_nights' : ['listing','max_nights]'],
+        }
 
-        if room_dict.get("id") == 19862073:
-            logger.debug("yep")
-        # property_type_id : 1
-        # tier id : 0
-        # listing_obj_type : 'REGULAR'
-        try:
-            room = RoomModel.create(
-                room_id = room_dict.get("id"),
-                room_type = room_dict.get("room_type"),
-                host_id = room_dict.get("user").get("id") if room_dict.get("room_type") else None,
-                address = room_dict.get("public_address"),
-                reviews = room_dict.get("reviews_count"),
-                overall_satisfaction = room_dict.get("star_rating"),
-                accommodates = room_dict.get("person_capacity"),
-                bedrooms = room_dict.get("bedrooms"),
-                bathrooms = room_dict.get("bathrooms"),
-                latitude = room_dict.get("lat"),
-                longitude = room_dict.get("lng"),
-                coworker_hosted = room_dict.get("coworker_hosted"),
-                extra_host_languages = room_dict.get("extra_host_languages")[:254] if room_dict.get("extra_host_languages") else None,
-                name = room_dict.get("name")[:254] if room_dict.get("name") else None,
-                license = room_dict.get("license"),
-                city = room_dict.get("localized_city") or room_dict.get("city"), # TODO check 'localized_city'
-                picture_url = room_dict.get("picture_url"),
-                neighborhood = room_dict.get("neighborhood"),
-                pdp_type = room_dict.get('pdp_type'),
-                pdp_url_type = room_dict.get('pdp_url_type'),
-                rate = rate,
-                rate_with_service_fee = rate_with_service_fee,
-                currency = currency,
-                survey_id = survey_id
-            )
+        def map_dict(source, mapping):
+            dest = {}
+            for k,v in mapping.items():
+                if type(v) == str:
+                    dest[k] = source.get(v)
+                elif type(v) == list:
+                    accessor = "source"
+                    for i in range(0, len(v)):
+                        accessor += f'.get(v[{i}], {{}})'
+                    dest[k] = eval(accessor) or None
+                else:
+                    raise KeyError("Malformed mapping dict for room parsing")
+            return dest
+
+        room_dict = map_dict(search_result, key_mappings)
+        room_dict['survey_id'] = str(survey_id)
+
+        try:    
+            room = RoomModel.create(**room_dict)
             return room.room_id
         except peewee.IntegrityError as e:
             logger.debug(f'Room with {room_dict.get("id")} already saved for this survey')
         except Exception as e:
             logger.info(f'Unknown error : {e}')
-
-        # pricing
-        # TODO implement pricings
-        #json_pricing = listing_dict["pricing_quote"]
-        #room.price = json_pricing["rate"]["amount"] if "rate" in json_pricing else None
-        #room.currency = json_pricing["rate"]["currency"] if "rate" in json_pricing else None
-        #room.rate_type = json_pricing["rate_type"] if "rate_type" in json_pricing else None
         return None
 
 

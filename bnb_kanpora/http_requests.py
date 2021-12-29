@@ -5,8 +5,10 @@ a set of requests.
 
 Tom Slee, 2013--2017.
 """
+from json.decoder import JSONDecodeError
 import logging
 import random
+import re
 import requests
 import json
 from requests.adapters import HTTPAdapter
@@ -91,9 +93,8 @@ class HTTPRequest():
         response = self.search_rooms(self.config.URL_API_SEARCH_ROOT, params)
         rooms = []
         if response:
-            response_dict = json.loads(response.text)
-
             try:
+                response_dict = json.loads(response.text)
                 if len(response_dict['explore_tabs']) != 1:
                     raise KeyError('JSON Explore_tabs should only contain a single element')
                 
@@ -107,6 +108,10 @@ class HTTPRequest():
                             rooms = response_section['listings']
             except KeyError as e:
                 logger.warning(f"Unexpected JSON format : {e}")
+                return SearchResults() 
+            except JSONDecodeError as e:
+                logger.warning(f"Parsing JSON from response failed: {e}")
+                logger.warning(f"Reponse code : {response.status_code}, text: {response.text}")
                 return SearchResults() 
 
             return SearchResults(
@@ -155,7 +160,11 @@ class HTTPRequest():
             try:
                 response = self.session.get(url=url, params=params, timeout=self.config.HTTP_TIMEOUT)
                 if response.status_code == 200:
-                    return response
+                    if len(response.text) > 0:
+                        return response
+                    else:
+                        retry_attempts += 1
+                        self.session = self._get_session()    
                 elif response.status_code == 403:
                     logger.info(f"Access forbidden, will try to open a new connection... attempt {retry_attempts} on {self.config.MAX_CONNECTION_ATTEMPTS}")
                     retry_attempts += 1

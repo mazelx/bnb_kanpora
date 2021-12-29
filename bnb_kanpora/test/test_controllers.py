@@ -13,9 +13,10 @@ import pandas as pd
 # Tests should be improved to cover edge cases 
 # sample box, smaller to bigger
 #sample_box = GeoBox(w_lng=5.566198, s_lat=47.425706, e_lng=5.617954, n_lat=47.460710) # gray small
-sample_box = GeoBox(w_lng=5.349655,s_lat=47.302050,e_lng=5.828934,n_lat=47.579305) # gray ~50 
-#sample_box = GeoBox(e_lng=1.800148,s_lat=46.771898, w_lng=1.581617, n_lat=46.916375) # chateauroux ~180
-#sample_box = GeoBox(e_lng=-1.525514, s_lat=47.192878, w_lng=-1.581819, n_lat=47.227861) # nantes centre
+#sample_box = GeoBox(w_lng=5.349655,s_lat=47.302050,e_lng=5.828934,n_lat=47.579305) # gray ~50 
+sample_box = GeoBox(e_lng=1.800148,s_lat=46.771898, w_lng=1.581617, n_lat=46.916375) # chateauroux ~180
+# sample_box = GeoBox(e_lng=-1.525514, s_lat=47.192878, w_lng=-1.581819, n_lat=47.227861) # nantes centre
+#sample_box = GeoBox(w_lng=-1.563942, s_lat=43.476669, e_lng=-1.541583, n_lat=43.491179) # biarritz micro
 
 @pytest.fixture
 def config():
@@ -76,13 +77,13 @@ def result_controller(config):
 
 @pytest.fixture
 def sample_room(result_controller:SearchResultsController, json_sample:dict, survey:int):
-    room = result_controller.create_room_from_search_result(json_sample, survey)
+    room = result_controller.parse_room_from_search_result(json_sample, survey)
     return (survey, room)
 
 def test_create_from_json(config, sample_room):
     survey, room = sample_room
     room_from_db =  RoomModel.get((RoomModel.survey_id == survey) & (RoomModel.room_id == room))
-    assert (room_from_db.survey_id.survey_id, room_from_db.room_id) == (1, 32230973)
+    assert (room_from_db.survey_id.survey_id, room_from_db.room_id) == (1, 40279867)
 
 # extra listing
 @pytest.fixture
