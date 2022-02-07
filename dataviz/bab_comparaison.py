@@ -12,7 +12,8 @@ NB_COLS = 3
 COLOR_GREEN = '#9ad9a3'
 COLOR_RED = '#e86b6b'
 CITIES = ['Biarritz', 'Anglet', 'Bayonne']
-PATH = f's3://kanpora-data/bab/rooms_current.csv'
+#PATH = f's3://kanpora-data/bab/rooms_current.csv'
+PATH = f's3://kanpora-data/rooms_8.csv'
 
 @dataclass
 class RoomTypes():
@@ -92,37 +93,37 @@ else:
                 st.markdown("Aucune donnée")
 
     # Maps
+    tileset = r'https://api.mapbox.com/styles/v1/mazelx/ckxag12zx9xzv15p51usukqmf/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoibWF6ZWx4IiwiYSI6ImNqOG9tODMzYzA1MnAydnBjZG5lYTR4bGwifQ.R7lZcLkJejwX4D4--1yMSA'
     for i, col in enumerate(list(st.columns(NB_COLS))):
         with col:
-            tileset = r'https://api.mapbox.com/styles/v1/mazelx/ckxag12zx9xzv15p51usukqmf/tiles/256/{z}/{x}/{y}@2x?access_token=pk.eyJ1IjoibWF6ZWx4IiwiYSI6ImNqOG9tODMzYzA1MnAydnBjZG5lYTR4bGwifQ.R7lZcLkJejwX4D4--1yMSA'
-
-            map = folium.Map(tiles=tileset, attr='<a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',
-                            location=[dfs[i].latitude.mean(),dfs[i].longitude.mean()],
-                            zoom_start=13,
-            )
-            feature_group = folium.FeatureGroup("Locations")
-            
-            for index, row in dfs[i].iterrows():
-                color = COLOR_GREEN if row.has_license else COLOR_RED
-                feature_group.add_child(
-                    folium.CircleMarker(
-                        location=[row.latitude,row.longitude],
-                        radius=1,
-                        tooltip=row['name'],
-                        popup=f'''
-                                <b>{row['name']}</b><br>
-                                {row['accommodates']} personnes<br>
-                                {'Enregistré (' + row['license'] + ')' if row['has_license'] else 'Non enregistré'}<br>
-                                <a href="https://www.airbnb.com/rooms/{row.room_id}" target="_blank" rel="noopener noreferrer">www.airbnb.com/rooms/{row.room_id}</a><br>
-                                <a href="https://www.airbnb.com/users/show/{row.host_id}" target="_blank" rel="noopener noreferrer">www.airbnb.com/users/show/{row.host_id}</a>
-                            ''',
-                        fill=True,
-                        color=color,
-                        fill_color=color,
-                    )
+            if len(dfs[i])>0:
+                map = folium.Map(tiles=tileset, attr='<a href="https://www.mapbox.com/map-feedback/" target="_blank">Improve this map</a>',
+                                location=[dfs[i].latitude.mean(),dfs[i].longitude.mean()],
+                                zoom_start=13,
                 )
-            map.add_child(feature_group)
-            maps.append(map)
+                feature_group = folium.FeatureGroup("Locations")
+                
+                for index, row in dfs[i].iterrows():
+                    color = COLOR_GREEN if row.has_license else COLOR_RED
+                    feature_group.add_child(
+                        folium.CircleMarker(
+                            location=[row.latitude,row.longitude],
+                            radius=1,
+                            tooltip=row['name'],
+                            popup=f'''
+                                    <b>{row['name']}</b><br>
+                                    {row['accommodates']} personnes<br>
+                                    {'Enregistré (' + row['license'] + ')' if row['has_license'] else 'Non enregistré'}<br>
+                                    <a href="https://www.airbnb.com/rooms/{row.room_id}" target="_blank" rel="noopener noreferrer">www.airbnb.com/rooms/{row.room_id}</a><br>
+                                    <a href="https://www.airbnb.com/users/show/{row.host_id}" target="_blank" rel="noopener noreferrer">www.airbnb.com/users/show/{row.host_id}</a>
+                                ''',
+                            fill=True,
+                            color=color,
+                            fill_color=color,
+                        )
+                    )
+                map.add_child(feature_group)
+                maps.append(map)
 
     st.markdown("#")
     st.markdown("""En 2020, la CAPB a pris une série de mesures pour tenter de réguler
@@ -146,13 +147,14 @@ else:
         df = dfs[i]
         df_multi_rooms = dfs_multi_rooms[i]
         with col:
-            folium_static(maps[i], 300, 300)
-            st.markdown("#")
-            st.metric(label="Capacité (Nombre de lits)", value=df.accommodates.sum(), delta="+XX% Y-1")
-            st.metric(label="Logements", value=len(df), delta="+XX% Y-1", delta_color="inverse")
-            st.metric(label="Loueurs", value=len(df.host_id.unique()), delta="+XX% Y-1")
-            st.metric(label="Taux d'enregistrement", value=f"{100 * len(df[df.has_license == True]) / len(df):.0f}%", delta="+XX% Y-1", delta_color="off")
-            st.metric(label="Loueurs multi-logement", value=len(df_multi_rooms.host_id.unique()), delta="+XX% Y-1")
+            if len(dfs[i])>0:
+                folium_static(maps[i], 300, 300)
+                st.markdown("#")
+                st.metric(label="Capacité (Nombre de lits)", value=df.accommodates.sum(), delta="+XX% Y-1")
+                st.metric(label="Logements", value=len(df), delta="+XX% Y-1", delta_color="inverse")
+                st.metric(label="Loueurs", value=len(df.host_id.unique()), delta="+XX% Y-1")
+                st.metric(label="Taux d'enregistrement", value=f"{100 * len(df[df.has_license == True]) / len(df):.0f}%", delta="+XX% Y-1", delta_color="off")
+                st.metric(label="Loueurs multi-logement", value=len(df_multi_rooms.host_id.unique()), delta="+XX% Y-1")
             
 
     data_load_state.write("")
