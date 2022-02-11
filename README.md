@@ -12,4 +12,6 @@ Sometimes the Airbnb site refuses repeated requests. I run the script using a nu
 
 requirements.txt
 
-selenium: install chromium driver
+# API description
+
+https://stevesie.com/apps/airbnb-api
