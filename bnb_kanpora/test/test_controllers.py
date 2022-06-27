@@ -105,7 +105,7 @@ def test_search_and_export(config, survey_controller:SearchSurveyController, sur
         if path.exists(EXPORT_FOLDER):
             shutil.rmtree(EXPORT_FOLDER)
         os.mkdir(EXPORT_FOLDER)
-        export_path = survey_controller.export(survey, folder=EXPORT_FOLDER)
+        export_path = survey_controller.export([survey], folder=EXPORT_FOLDER)
         exported_df_size = len(pd.read_csv(export_path))
     except Exception as e:
         pass

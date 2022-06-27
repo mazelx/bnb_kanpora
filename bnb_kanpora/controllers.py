@@ -203,15 +203,15 @@ class SearchSurveyController():
         survey_results.total_nb_saved = nb_saved
         return survey_results
 
-    def export(self, survey_id:int, folder="export") -> str:
-        path = f'{folder}/rooms_{survey_id}.csv'
+    def export(self, survey_ids:list[int], folder="export") -> str:
+        path = f'{folder}/rooms_{"-".join(survey_ids)}.csv'
         db = DataSet(f'sqlite:///{self.config.database.database}')
         query = (RoomModel
          .select(
             SearchAreaModel.search_area_id, SearchAreaModel.name.alias("search_area_name"), RoomModel)
          .join(SurveyModel, peewee.JOIN.INNER)
          .join(SearchAreaModel,  peewee.JOIN.INNER)
-         .where(SurveyModel.survey_id == survey_id)
+         .where(SurveyModel.survey_id << survey_ids)
         )
         db.freeze(query, format='csv', filename=path)
         return path

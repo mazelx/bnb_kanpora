@@ -131,8 +131,8 @@ class ABCollectorApp:
         
         elif(args.subcommand == "export"):
             survey_viewer.print_surveys()
-            survey_id = input("survey_id : ")
-            survey_controller.export(survey_id)
+            survey_id = input("survey_ids (separated by ',') : ")
+            survey_controller.export(survey_id.split(','))
         else:
             print("Unrecognized subcommand")
             parser.print_help()
