@@ -16,6 +16,7 @@ from bnb_kanpora.utils import GeoBox
 SCRIPT_VERSION_NUMBER = "0.1.0"
  
 logger = logging.getLogger()
+logger.setLevel(logging.INFO)
 
 class ABCollectorApp:
 
@@ -70,7 +71,7 @@ class ABCollectorApp:
         args = parser.parse_args(sys.argv[2:]) 
 
         if(args.verbose):
-            print("with verbose")
+            logger.setLevel(logging.DEBUG)
         if(args.config_file):
             print(f"with config {args.config_file}")
         
@@ -124,7 +125,7 @@ class ABCollectorApp:
             search_area_id = input("search_area_id : ")
             survey_id = survey_controller.add(search_area_id)
             results = survey_controller.run(survey_id)
-            logger.info(f"{results.total_nb_rooms} parsed, {results.total_nb_saved} saved, {results.total_nb_rooms_expected} expected")
+            logger.info(f"Finished survey {survey_id} (search area {search_area_id}) : {results.total_nb_rooms} parsed, {results.total_nb_saved} saved, {results.total_nb_rooms_expected} expected")
         
         elif(args.subcommand == "run_extra"):
             print("run extra information search for survey")

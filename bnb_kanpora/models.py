@@ -75,8 +75,8 @@ class RoomModel(Model):
     pdp_url_type = CharField(200, null=True)
     rate = DecimalField(5,2, null=True)
     rate_with_service_fee = DecimalField(5,2, null=True)
-    monthly_price_factor = DecimalField(5,3)
-    weekly_price_factor = DecimalField(5,3)
+    monthly_price_factor = DecimalField(5,3, null=True)
+    weekly_price_factor = DecimalField(5,3, null=True)
 
 class SurveyProgressModel(Model):
     class Meta:
