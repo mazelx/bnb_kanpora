@@ -192,7 +192,6 @@ class SearchSurveyController():
 
     def save_results(self, survey_results:SurveyResults, survey_id:int) -> int:
         nb_saved = 0
-
         for tree_idx, search_results in survey_results.search_results.items():
             for room in search_results.rooms:
                 room_id = int(room["listing"]["id"])
@@ -240,45 +239,49 @@ class SearchResultsController():
         """
 
         key_mappings = {
-            'room_id' : ['listing','id'],
-            'room_type' : ['listing','room_type'],
-            'host_id' : ['listing', 'user','id'],
-            'address' : ['listing','public_address'],
-            'reviews' : ['listing','reviews_count'],
-            'overall_satisfaction' : ['listing','star_rating'],
-            'accommodates' : ['listing','person_capacity'],
-            'bedrooms' : ['listing','bedrooms'],
-            'bathrooms' : ['listing','bathrooms'],
-            'latitude' : ['listing','lat'],
-            'longitude' : ['listing','lng'],
-            'coworker_hosted' : ['listing','coworker_hosted'],
-            'extra_host_languages' : ['listing','extra_host_languages'],
-            'name' : ['listing','name'],
-            'license' : ['listing','license'],
-            'city' : ['listing','localized_city'],
-            'picture_url' : ['listing','picture_url'],
-            'neighborhood' : ['listing','neighborhood'],
-            'pdp_type' : ['listing','pdp_type'],
-            'pdp_url_type' : ['listing','pdp_url_type'],
-            'rate' : ['pricing_quote','rate', 'amount'],
-            'rate_with_service_fee' : ['pricing_quote','rate_with_service_fee', 'amount'],
-            'currency' : ['pricing_quote', 'rate', 'currency'],
-            'weekly_price_factor' : ['pricing_quote', 'weekly_price_factor'],
-            'monthly_price_factor' : ['pricing_quote', 'monthly_price_factor'],
-            'min_nights' : ['listing','min_nights'],
-            'max_nights' : ['listing','max_nights]'],
+            'room_id' : (['listing','id'],),
+            'room_type' : (['listing','room_type'],),
+            'host_id' : (['listing', 'user','id'],),
+            'address' : (['listing','public_address'],),
+            'reviews' : (['listing','reviews_count'],),
+            'overall_satisfaction' : (['listing','star_rating'],),
+            'accommodates' : (['listing','person_capacity'],),
+            'bedrooms' : (['listing','bedrooms'],),
+            'bathrooms' : (['listing','bathrooms'],),
+            'latitude' : (['listing','lat'],),
+            'longitude' : (['listing','lng'],),
+            'coworker_hosted' : (['listing','coworker_hosted'],),
+            'extra_host_languages' : (['listing','extra_host_languages'],),
+            'name' : (['listing','name'],),
+            'license' : (['listing','license'],),
+            'city' : (['listing','localized_city'],),
+            'picture_url' : (['listing','picture_url'],),
+            'neighborhood' : (['listing','neighborhood'],),
+            'pdp_type' : (['listing','pdp_type'],),
+            'pdp_url_type' : (['listing','pdp_url_type'],),
+            'rate' : (['pricing_quote', 'structured_stay_display_price','primary_line', 'price'], lambda v: v.replace('\xa0€','')),
+            'rate_with_service_fee' : (['pricing_quote','rate_with_service_fee', 'amount'],),
+            'currency' : (['pricing_quote', 'rate', 'currency'],),
+            'weekly_price_factor' : (['pricing_quote', 'weekly_price_factor'],),
+            'monthly_price_factor' : (['pricing_quote', 'monthly_price_factor'],),
+            'min_nights' : (['listing','min_nights'],),
+            'max_nights' : (['listing','max_nights'],),
         }
 
         def map_dict(source, mapping):
             dest = {}
-            for k,v in mapping.items():
-                if type(v) == str:
-                    dest[k] = source.get(v)
-                elif type(v) == list:
+            for k, path in mapping.items():
+                if type(path) == str:
+                    dest[k] = source.get(path)
+                elif type(path) == tuple:
                     accessor = "source"
-                    for i in range(0, len(v)):
-                        accessor += f'.get(v[{i}], {{}})'
-                    dest[k] = eval(accessor) or None
+                    for i in range(0, len(path[0])):
+                        accessor += f'.get(path[0][{i}], {{}})'
+                    value = eval(accessor) or None
+                    # a lambda function is used for string manipulation
+                    if (value and len(path) > 1):
+                        value = path[1](value)
+                    dest[k] = value
                 else:
                     raise KeyError("Malformed mapping dict for room parsing")
             return dest
@@ -290,7 +293,11 @@ class SearchResultsController():
             room = RoomModel.create(**room_dict)
             return room.room_id
         except peewee.IntegrityError as e:
-            logger.debug(f'Room with {room_dict.get("id")} already saved for this survey')
+            if room_dict.get("id"):
+                logger.debug(f'Room with {room_dict.get("id")} already saved for this survey')
+            else:
+                logger.info(f"Error creating room : {e}")
+
         except Exception as e:
             logger.info(f'Unknown error : {e}')
         return None
