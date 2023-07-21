@@ -52,3 +52,4 @@ TODO
 app.secrets
 dev/
 *.bck
+.env/
